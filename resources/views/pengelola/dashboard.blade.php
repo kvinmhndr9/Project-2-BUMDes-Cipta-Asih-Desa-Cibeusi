@@ -1,9 +1,22 @@
-@extends('layouts.app')
+@extends('layouts.dashboard')
 
 @section('title', 'Dashboard Pengelola')
 
 @section('content')
 <h4 class="fs-4 fw-semibold mb-4">Dashboard Pengelola BUMDes</h4>
+
+{{-- Badge Notifikasi Tiket Baru --}}
+@if($notifCount > 0)
+<div class="alert alert-success d-flex align-items-center gap-3 shadow-sm border-0 mb-4" id="notif-banner" role="alert">
+    <span class="badge bg-success rounded-pill fs-6 px-3" id="notif-badge-count">{{ $notifCount }}</span>
+    <span><i class="bi bi-bell-fill me-1"></i> Ada <strong>{{ $notifCount }}</strong> transaksi tiket baru dari seluruh wisata sejak kunjungan terakhir.</span>
+    <button type="button" class="btn-close ms-auto" onclick="document.getElementById('notif-banner').remove()"></button>
+</div>
+@else
+<div id="notif-banner" class="d-none">
+    <span id="notif-badge-count">0</span>
+</div>
+@endif
 
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-body">
@@ -175,7 +188,7 @@
             }
         });
 
-        var REALTIME_INTERVAL = 1500;
+        var REALTIME_INTERVAL = 15000;
         var base_url = '{{ route("pengelola.dashboard") }}';
         var form = document.getElementById('form-dashboard');
         var periodeInput = document.getElementById('periode');
@@ -240,6 +253,21 @@
                             pendapatanChart.data.labels = newLabels;
                             pendapatanChart.data.datasets[0].data = newPendapatan;
                             pendapatanChart.update('none');
+                        }
+                    }
+
+                    // Update notifikasi tiket baru
+                    if (data.notifCount !== undefined && data.notifCount > 0) {
+                        var banner = document.getElementById('notif-banner');
+                        var badgeEl = document.getElementById('notif-badge-count');
+                        if (banner && banner.classList.contains('d-none')) {
+                            banner.classList.remove('d-none');
+                            banner.classList.add('alert', 'alert-success', 'd-flex', 'align-items-center', 'gap-3', 'shadow-sm', 'border-0', 'mb-4');
+                            banner.innerHTML = '<span class="badge bg-success rounded-pill fs-6 px-3" id="notif-badge-count">' + data.notifCount + '</span>' +
+                                '<span><i class="bi bi-bell-fill me-1"></i> Ada <strong>' + data.notifCount + '</strong> transaksi tiket baru dari seluruh wisata.</span>' +
+                                '<button type="button" class="btn-close ms-auto" onclick="document.getElementById(\'notif-banner\').classList.add(\'d-none\')"></button>';
+                        } else if (badgeEl) {
+                            badgeEl.textContent = data.notifCount;
                         }
                     }
                 })

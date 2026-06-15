@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.dashboard')
 
 @section('title', 'Laporan Penjualan Tiket')
 
@@ -21,7 +21,7 @@
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-4">
             <form action="{{ route('pengelola.laporan.index') }}" method="GET" class="row g-3 align-items-end">
-                <div class="col-md-4">
+                <div class="col-lg-3 col-md-6">
                     <label for="jenis" class="form-label fw-semibold text-secondary small">Jenis Penjualan</label>
                     <select class="form-select border-primary bg-light" id="jenis" name="jenis" onchange="this.form.submit()">
                         <option value="semua" {{ $jenis == 'semua' ? 'selected' : '' }}>Semua</option>
@@ -29,7 +29,16 @@
                         <option value="offline" {{ $jenis == 'offline' ? 'selected' : '' }}>Penjualan Tiket Offline</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-lg-3 col-md-6">
+                    <label for="wisata_id" class="form-label fw-semibold text-secondary small">Pilih Wisata</label>
+                    <select class="form-select border-primary bg-light" id="wisata_id" name="wisata_id" onchange="this.form.submit()">
+                        <option value="semua" {{ $wisata_id == 'semua' ? 'selected' : '' }}>Semua Wisata</option>
+                        @foreach($semua_wisata as $w)
+                            <option value="{{ $w->id }}" {{ $wisata_id == $w->id ? 'selected' : '' }}>{{ $w->nama }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6">
                     <label for="periode" class="form-label fw-semibold text-secondary small">Pilih Periode</label>
                     <select class="form-select border-primary bg-light" id="periode" name="periode" onchange="this.form.submit()">
                         <option value="hari" {{ $periode == 'hari' ? 'selected' : '' }}>Harian</option>
@@ -37,7 +46,7 @@
                         <option value="bulan" {{ $periode == 'bulan' ? 'selected' : '' }}>Bulanan</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-lg-3 col-md-6">
                     <label for="tanggal" class="form-label fw-semibold text-secondary small">
                         Pilih {{ $periode == 'bulan' ? 'Bulan & Tahun' : 'Tanggal' }}
                     </label>
@@ -121,9 +130,9 @@
             <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-table text-primary me-2"></i> Rincian Per Wisata</h5>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                    <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
                         <tr>
                             <th scope="col" class="ps-4 text-secondary fw-semibold py-3 border-bottom-0">Nama Wisata</th>
                             @if($jenis == 'semua' || $jenis == 'online')

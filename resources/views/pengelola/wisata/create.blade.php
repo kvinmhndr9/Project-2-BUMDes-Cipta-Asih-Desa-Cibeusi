@@ -35,6 +35,12 @@
                         <input type="number" name="harga_camping" id="harga_camping" value="{{ old('harga_camping', 0) }}" min="0" class="form-control @error('harga_camping') is-invalid @enderror" placeholder="Contoh: 25000">
                         @error('harga_camping')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
+
+                    <div class="mb-3">
+                        <label for="stok" class="form-label fw-medium">Stok <span class="text-danger">*</span></label>
+                        <input type="number" name="stok" id="stok" value="{{ old('stok', 100) }}" min="0" class="form-control @error('stok') is-invalid @enderror" required>
+                        @error('stok')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
                     
                     <div class="mb-3">
                         <label for="deskripsi" class="form-label fw-medium">Deskripsi</label>
@@ -43,9 +49,13 @@
                     </div>
                     
                     <div class="mb-4">
-                        <label for="gambar" class="form-label fw-medium">Gambar</label>
-                        <input type="file" name="gambar" id="gambar" accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" class="form-control @error('gambar') is-invalid @enderror">
-                        <div class="form-text">Maks. 2MB. Format: jpeg, png, jpg, gif, webp.</div>
+                        <label for="gambar" class="form-label fw-medium">Gambar Utama (Sampul) <span class="text-danger">*</span></label>
+                        <input type="file" name="gambar" id="gambar" accept="image/jpeg,image/png,image/jpg" class="form-control @error('gambar') is-invalid @enderror" onchange="openGlobalCrop(this, { previewContainerId: 'preview-gambar', aspectRatio: 16/9 })" required>
+                        <div class="form-text">Maks. 10MB. Format: jpeg, png, jpg.</div>
+                        <div class="mt-2 d-none">
+                            <p class="small text-muted mb-1">Preview Foto:</p>
+                            <img id="preview-gambar" src="" alt="Preview" class="img-thumbnail" style="max-height: 200px;">
+                        </div>
                         @error('gambar')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     
@@ -58,4 +68,5 @@
         </div>
     </div>
 </div>
+<x-crop-modal />
 @endsection

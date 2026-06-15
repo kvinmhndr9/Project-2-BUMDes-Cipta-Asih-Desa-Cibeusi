@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.dashboard')
 
 @section('title', 'Laporan Penjualan – ' . $wisata->nama)
 
@@ -100,9 +100,9 @@
                 <span id="label-periode" class="text-muted fw-normal fs-6 ms-2">{{ $label }}</span>
             </h5>
             <p class="text-muted small mb-3">Tiket yang dipesan dan dibayar melalui sistem.</p>
-            <div class="table-responsive">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                 <table class="table table-hover table-striped align-middle mb-0">
-                    <thead class="table-light">
+                    <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
                         <tr>
                             <th class="text-uppercase text-secondary small">Waktu</th>
                             <th class="text-uppercase text-secondary small">Kode Tiket</th>
@@ -152,9 +152,9 @@
                 </a>
             </div>
             <p class="text-muted small mb-3">Tiket yang terjual langsung di lokasi wisata.</p>
-            <div class="table-responsive">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                 <table class="table table-hover table-striped align-middle mb-0">
-                    <thead class="table-light">
+                    <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
                         <tr>
                             <th class="text-uppercase text-secondary small">Tanggal</th>
                             <th class="text-uppercase text-secondary small text-center">Tiket Terjual</th>
@@ -262,8 +262,9 @@
             .then(r => {
                 if (r.status === 401) {
                     if (laporanInterval) clearInterval(laporanInterval);
-                    return;
+                    return null;
                 }
+                if (!r.ok) return null;
                 return r.json();
             })
             .then(data => {
@@ -350,7 +351,7 @@
         tanggal.addEventListener('change', () => updateLaporan(false));
         
         if (laporanInterval) clearInterval(laporanInterval);
-        laporanInterval = setInterval(() => updateLaporan(true), 1500);
+        laporanInterval = setInterval(() => updateLaporan(true), 15000);
     }
 
     document.addEventListener("turbo:before-cache", function() {

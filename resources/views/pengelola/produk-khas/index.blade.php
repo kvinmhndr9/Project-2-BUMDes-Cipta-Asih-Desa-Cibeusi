@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.dashboard')
 
 @section('title', 'Kelola Produk Khas')
 
@@ -31,7 +31,6 @@
                         <td class="px-4 py-3 small text-muted">{{ Str::limit($p->keterangan, 50) }}</td>
                         <td class="px-4 py-3 text-end text-nowrap">
                             <div class="d-flex justify-content-end gap-1">
-                                <a href="{{ route('pengelola.produk-khas.show', $p) }}" class="btn btn-sm btn-outline-info fw-medium">Detail</a>
                                 <a href="{{ route('pengelola.produk-khas.edit', $p) }}" class="btn btn-sm btn-outline-primary fw-medium">Ubah</a>
                                 <button type="button"
                                     class="btn btn-sm btn-outline-danger fw-medium btn-hapus"
@@ -58,17 +57,36 @@
 {{-- Tampilan Mobile (Card) --}}
 <div class="d-md-none">
     @forelse($produk as $p)
-    <div class="card shadow-sm border-0 mb-3">
-        <div class="card-body">
-            <h5 class="card-title fw-bold text-dark mb-2">{{ $p->nama }}</h5>
-            
-            <p class="card-text small text-muted mb-3">{{ Str::limit($p->keterangan, 80) }}</p>
-            
+    <div class="card border-0 mb-3 overflow-hidden"
+         style="border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
+        {{-- Header --}}
+        <div class="card-header border-0 py-3 px-3" style="background: linear-gradient(90deg, #00b4d8 0%, #2d6a4f 100%);">
+            <h6 class="fw-bold text-white mb-0">{{ $p->nama }}</h6>
+        </div>
+
+        {{-- Body --}}
+        <div class="card-body px-3 py-3">
+            @if($p->wisata)
+            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                <span class="text-muted small" style="min-width:90px;">Wisata</span>
+                <span class="small fw-medium text-end">{{ $p->wisata->nama }}</span>
+            </div>
+            @endif
+
+            @if($p->keterangan)
+            <p class="small text-muted mb-0">{{ Str::limit($p->keterangan, 90) }}</p>
+            @endif
+        </div>
+
+        {{-- Footer Aksi --}}
+        <div class="card-footer border-0 bg-white px-3 pb-3 pt-0">
             <div class="d-flex gap-2">
-                <a href="{{ route('pengelola.produk-khas.show', $p) }}" class="btn btn-sm btn-outline-info flex-fill fw-medium">Detail</a>
-                <a href="{{ route('pengelola.produk-khas.edit', $p) }}" class="btn btn-sm btn-outline-primary flex-fill fw-medium">Ubah</a>
+                <a href="{{ route('pengelola.produk-khas.edit', $p) }}"
+                   class="btn btn-primary btn-sm flex-fill fw-semibold rounded-pill">
+                    Ubah
+                </a>
                 <button type="button"
-                    class="btn btn-sm btn-outline-danger flex-fill fw-medium btn-hapus"
+                    class="btn btn-outline-danger btn-sm flex-fill fw-semibold rounded-pill btn-hapus"
                     data-nama="{{ $p->nama }}"
                     data-action="{{ route('pengelola.produk-khas.destroy', $p) }}">
                     Hapus
@@ -77,9 +95,10 @@
         </div>
     </div>
     @empty
-    <div class="card shadow-sm border-0">
+    <div class="card border-0 shadow-sm">
         <div class="card-body text-center text-muted py-5">
-            Belum ada produk khas. <br><a href="{{ route('pengelola.produk-khas.create') }}" class="text-primary text-decoration-none mt-2 d-inline-block">Tambah produk</a>
+            Belum ada produk khas.<br>
+            <a href="{{ route('pengelola.produk-khas.create') }}" class="text-primary text-decoration-none mt-2 d-inline-block">Tambah produk</a>
         </div>
     </div>
     @endforelse

@@ -34,13 +34,17 @@ class Tiket extends Model
         'parkir_tipe',
         'parkir_harga',
         'used_at',
+        'reschedule_count',
+        'cancelled_at',
+        'cancel_reason',
     ];
 
     protected $casts = [
-        'total_harga' => 'decimal:0',
-        'parkir_harga' => 'decimal:0',
+        'total_harga'        => 'decimal:0',
+        'parkir_harga'       => 'decimal:0',
         'tanggal_berkunjung' => 'date',
-        'used_at' => 'datetime',
+        'used_at'            => 'datetime',
+        'cancelled_at'       => 'datetime',
     ];
 
     public function user()

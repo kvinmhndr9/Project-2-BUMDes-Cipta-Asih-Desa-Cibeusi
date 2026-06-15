@@ -11,9 +11,10 @@
         </ol>
     </nav>
 
+    <h1 class="fw-bold text-primary mb-3">{{ $wisata->nama }}</h1>
+    
     <div class="row">
         <div class="col-lg-8">
-            <h1 class="fw-bold text-primary mb-3">{{ $wisata->nama }}</h1>
             <img src="{{ $wisata->gambar_url }}" class="img-fluid rounded shadow-sm mb-4 w-100" alt="{{ $wisata->nama }}" style="max-height: 400px; object-fit: cover;">
             
             <div class="bg-white p-4 rounded shadow-sm mb-4">
@@ -156,7 +157,11 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label small fw-medium">Foto (Opsional)</label>
-                                <input type="file" name="foto" class="form-control" accept="image/*">
+                                <input type="file" name="foto" id="fotoUpload" class="form-control" accept="image/jpeg,image/png,image/jpg" onchange="openGlobalCrop(this, { previewContainerId: 'fotoPreview' })">
+                                <div class="mt-2 d-none" id="previewContainer">
+                                    <p class="small text-muted mb-1">Preview Foto:</p>
+                                    <img id="fotoPreview" src="" alt="Preview" class="img-thumbnail" style="max-height: 150px;">
+                                </div>
                             </div>
                             <div class="text-end">
                                 <button type="submit" class="btn btn-primary px-4"><i class="bi bi-send me-1"></i>Kirim Ulasan</button>
@@ -171,6 +176,36 @@
         </div>
         
         <div class="col-lg-4">
+            {{-- Informasi Operasional --}}
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold text-primary"><i class="bi bi-clock me-2"></i>Jadwal Operasional</h5>
+                    <hr>
+                    <div class="mb-3">
+                        <p class="fw-medium mb-1 text-secondary" style="font-size: 0.9rem;">Hari Buka</p>
+                        @if(is_array($wisata->hari_buka) && count($wisata->hari_buka) > 0)
+                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                @foreach($wisata->hari_buka as $hari)
+                                    <span class="badge" style="background-color: rgba(62,219,240,0.15); color: #04009A; border: 1px solid rgba(62,219,240,0.5);">{{ $hari }}</span>
+                                @endforeach
+                            </div>
+                        @else
+                            <span class="fw-bold text-success" style="font-size: 0.95rem;"><i class="bi bi-check-circle-fill me-1"></i>Buka Setiap Hari</span>
+                        @endif
+                    </div>
+                    <div>
+                        <p class="fw-medium mb-1 text-secondary" style="font-size: 0.9rem;">Jam Operasional</p>
+                        @if($wisata->jam_buka && $wisata->jam_tutup)
+                            <span class="fw-bold" style="color: #04009A; font-size: 0.95rem;">
+                                <i class="bi bi-stopwatch me-1 text-info"></i> {{ \Carbon\Carbon::parse($wisata->jam_buka)->format('H:i') }} - {{ \Carbon\Carbon::parse($wisata->jam_tutup)->format('H:i') }} WIB
+                            </span>
+                        @else
+                            <span class="text-muted small">Menyesuaikan kondisi pengelola</span>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
             <div class="card shadow-sm border-0 sticky-top" style="top: 20px;">
                 <div class="card-body">
                     <h5 class="card-title fw-bold text-primary">Informasi Tiket</h5>
@@ -201,6 +236,10 @@
         </div>
     </div>
 </div>
+@push('modals')
+<x-crop-modal />
+@endpush
+
 @endsection
 
 @push('scripts')

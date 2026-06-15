@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Tiket;
 use App\Services\MidtransService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class MidtransNotificationController extends Controller
@@ -17,7 +18,7 @@ class MidtransNotificationController extends Controller
             return response()->json(['message' => 'Invalid payload'], 400);
         }
 
-        $midtrans = new MidtransService;
+        $midtrans = app(MidtransService::class);
         if (! $midtrans->verifyNotification($payload)) {
             return response()->json(['message' => 'Invalid signature'], 403);
         }
@@ -37,11 +38,16 @@ class MidtransNotificationController extends Controller
                     'midtrans_transaction_id' => $payload['transaction_id'] ?? null,
                 ]);
 
+                // ── Increment counter notifikasi untuk admin wisata & pengelola ──
+                cache()->increment('notif_admin_' . $tiket->id_wisata);
+                cache()->increment('notif_pengelola');
+
                 // Kirim notifikasi WhatsApp
                 $wa = new \App\Services\WhatsAppService();
                 $tiket->load('user', 'wisata');
                 if ($tiket->user && $tiket->user->no_hp) {
-                    $pesan = "Halo {$tiket->user->name},\n\nPembayaran via Midtrans untuk wisata *{$tiket->wisata->nama}* berhasil dikonfirmasi.\n\nKode Trx: {$tiket->midtrans_order_id}\nKode Tiket: *{$tiket->kode_tiket}*\nTanggal Kunjungan: {$tiket->tanggal_berkunjung->format('d/m/Y')}\n\nTunjukkan pesan ini beserta QR Code kepada petugas.";
+                    $tanggalBerkunjung = Carbon::parse($tiket->tanggal_berkunjung);
+                    $pesan = "Halo {$tiket->user->name},\n\nPembayaran via Midtrans sebesar *Rp " . number_format((float) $tiket->total_harga, 0, ',', '.') . "* untuk wisata *{$tiket->wisata->nama}* berhasil dikonfirmasi.\n\nKode Transaksi: {$tiket->midtrans_order_id}\nKode Tiket: *{$tiket->kode_tiket}*\nTanggal Kunjungan: {$tanggalBerkunjung->format('d/m/Y')}\nJumlah Pengunjung: *{$tiket->jumlah}* orang\n\nSilahkan tunjukkan QR Code Tiket kepada petugas saat masuk.";
                     
                     $encodedContent = urlencode($tiket->qr_content ?? $tiket->kode_tiket);
                     $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data={$encodedContent}";

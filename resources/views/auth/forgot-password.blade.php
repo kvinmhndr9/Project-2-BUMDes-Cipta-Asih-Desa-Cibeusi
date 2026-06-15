@@ -2,27 +2,7 @@
 
 @section('title', 'Lupa Kata Sandi')
 
-@push('styles')
-<style>
-    .password-wrapper { position: relative; }
-    .password-wrapper .form-control { padding-right: 2.8rem; }
-    .toggle-password {
-        position: absolute;
-        right: 0.75rem;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        padding: 0;
-        color: #adb5bd;
-        cursor: pointer;
-        font-size: 1rem;
-        line-height: 1;
-        transition: color 0.2s;
-    }
-    .toggle-password:hover { color: #6c757d; }
-</style>
-@endpush
+
 
 @section('content')
 <div class="row justify-content-center">
@@ -30,10 +10,7 @@
         <div class="card shadow-sm border-0 rounded-3">
             <div class="card-body p-4 p-md-5">
                 <div class="text-center mb-4">
-                    <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 rounded-circle mb-3" style="width:56px;height:56px">
-                        <i class="bi bi-envelope-at fs-4 text-primary"></i>
-                    </div>
-                    <h4 class="fw-semibold mb-1">Lupa Kata Sandi?</h4>
+                    <h4 class="fw-semibold mb-1" style="background: linear-gradient(90deg, #00b4d8, #2d6a4f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Lupa Kata Sandi?</h4>
                     <p class="text-muted small mb-0">
                         Masukkan email Anda dan kami akan mengirimkan<br>link untuk mereset kata sandi.
                     </p>
@@ -63,7 +40,7 @@
                             @enderror
                         </div>
                         <button type="submit" class="btn btn-primary w-100 py-2 fw-medium">
-                            <i class="bi bi-send me-1"></i> Kirim Link Reset
+                            Kirim Link Reset
                         </button>
                     </form>
                 @endif

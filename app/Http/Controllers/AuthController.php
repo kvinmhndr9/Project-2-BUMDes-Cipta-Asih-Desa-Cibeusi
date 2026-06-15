@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Auth\Events\Registered;
 
 class AuthController extends Controller
 {
@@ -30,11 +31,23 @@ class AuthController extends Controller
         ];
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
+
+            if ($user->role === 'pengunjung' && $user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail()) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()->route('verification.otp.show', ['email' => $user->email])
+                    ->with('info', 'Silakan verifikasi email Anda terlebih dahulu.');
+            }
+
             $request->session()->regenerate();
             // Hapus intended URL agar tidak salah diarahkan ke URL yang tersimpan sebelumnya
             $request->session()->forget('url.intended');
 
-            return $this->redirectByRole(Auth::user());
+            return $this->redirectByRole($user);
         }
 
         return back()->withErrors([
@@ -64,8 +77,11 @@ class AuthController extends Controller
             'role'     => 'pengunjung',
         ]);
 
-        // Pendaftar baru tidak langsung login, kembali ke form login
-        return redirect()->route('login')->with('success', 'Daftar berhasil, silahkan login dengan akun yang sudah dibuat.');
+        event(new Registered($user));
+
+        // Arahkan ke halaman input kode OTP
+        return redirect()->route('verification.otp.show', ['email' => $user->email])
+            ->with('register_success', 'Pendaftaran berhasil! Silakan masukkan kode verifikasi yang telah dikirim ke email Anda.');
     }
 
     public function logout(Request $request)
@@ -104,6 +120,9 @@ class AuthController extends Controller
                     'google_id' => $googleUser->getId(),
                     'avatar'    => $googleUser->getAvatar(),
                 ]);
+                if (! $user->hasVerifiedEmail()) {
+                    $user->markEmailAsVerified();
+                }
             } else {
                 $user = User::create([
                     'name'      => $googleUser->getName() ?: $googleUser->getEmail(),
@@ -113,6 +132,7 @@ class AuthController extends Controller
                     'password'  => Hash::make(Str::random(32)),
                     'role'      => 'pengunjung',
                 ]);
+                $user->markEmailAsVerified();
             }
         }
 

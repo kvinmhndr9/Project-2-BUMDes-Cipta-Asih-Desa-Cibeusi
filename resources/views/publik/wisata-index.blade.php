@@ -6,7 +6,7 @@
 <div class="container py-4">
     <div class="row mb-4">
         <div class="col-12 text-center" data-aos="fade-down">
-            <h1 class="fw-bold text-primary">Destinasi Wisata SIASIH</h1>
+            <h1 class="fw-bold text-primary">Destinasi Wisata Desa Cibeusi</h1>
             <p class="text-muted">Jelajahi keindahan alam di Desa Cibeusi</p>
         </div>
     </div>

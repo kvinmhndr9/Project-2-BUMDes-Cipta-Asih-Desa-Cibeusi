@@ -2,27 +2,7 @@
 
 @section('title', 'Login')
 
-@push('styles')
-<style>
-    .password-wrapper { position: relative; }
-    .password-wrapper .form-control { padding-right: 2.8rem; }
-    .toggle-password {
-        position: absolute;
-        right: 0.75rem;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        padding: 0;
-        color: #adb5bd;
-        cursor: pointer;
-        font-size: 1rem;
-        line-height: 1;
-        transition: color 0.2s;
-    }
-    .toggle-password:hover { color: #6c757d; }
-</style>
-@endpush
+
 
 @section('content')
 <div class="row justify-content-center">
@@ -30,6 +10,20 @@
         <div class="card shadow-sm border-0 rounded-3">
             <div class="card-body p-4 p-md-5">
                 <h4 class="card-title fs-4 fw-semibold mb-4 text-center w-100" style="text-align: center;">Masuk</h4>
+
+                @if(session('register_success'))
+                <div class="alert border-0 rounded-3 mb-4 d-flex align-items-start gap-3 p-3"
+                     style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-left: 4px solid #10b981 !important;"
+                     data-turbo-cache="false">
+                    <div class="flex-shrink-0 mt-1">
+                        <i class="bi bi-check-circle-fill fs-5" style="color: #059669;"></i>
+                    </div>
+                    <div>
+                        <div class="fw-semibold" style="color: #065f46; font-size: 0.9rem;">{{ session('register_success') }}</div>
+                    </div>
+                </div>
+                @endif
+
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
                     <div class="mb-3">

@@ -10,8 +10,8 @@
                 <h5 class="mb-0 fw-semibold d-flex align-items-center gap-2">
                     <i class="bi bi-credit-card"></i> Pembayaran via Midtrans
                 </h5>
-                <a href="{{ route('pengunjung.tiket.my') }}" class="btn btn-light btn-sm fw-medium text-primary">
-                    <i class="bi bi-arrow-left me-1"></i> Kembali ke Tiket Saya
+                <a href="{{ route('pengunjung.tiket.show', $tiket) }}" class="btn btn-light btn-sm fw-medium text-primary">
+                    <i class="bi bi-arrow-left me-1"></i> Kembali ke Detail Tiket   
                 </a>
             </div>
             <div class="card-body p-4 p-sm-5">
@@ -83,13 +83,6 @@
 @endsection
 
 @if($snap_token)
-@push('styles')
-<style>
-#snap-container { width: 100%; }
-#snap-container iframe { width: 100% !important; min-height: 560px; }
-</style>
-@endpush
-
 @push('scripts')
 @php
     $snapJsUrl = config('services.midtrans.is_production')

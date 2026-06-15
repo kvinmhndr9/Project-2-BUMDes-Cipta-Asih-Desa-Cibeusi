@@ -2,27 +2,7 @@
 
 @section('title', 'Daftar')
 
-@push('styles')
-<style>
-    .password-wrapper { position: relative; }
-    .password-wrapper .form-control { padding-right: 2.8rem; }
-    .toggle-password {
-        position: absolute;
-        right: 0.75rem;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        padding: 0;
-        color: #adb5bd;
-        cursor: pointer;
-        font-size: 1rem;
-        line-height: 1;
-        transition: color 0.2s;
-    }
-    .toggle-password:hover { color: #6c757d; }
-</style>
-@endpush
+
 
 @section('content')
 <div class="row justify-content-center">

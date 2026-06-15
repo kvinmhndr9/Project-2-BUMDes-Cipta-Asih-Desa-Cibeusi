@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.dashboard')
 
 @section('title', 'History Validasi Tiket')
 
@@ -137,7 +137,7 @@
 
         periode.addEventListener('change', function() { updateHistory(false); });
         tanggal.addEventListener('change', function() { updateHistory(false); });
-        var ivId = setInterval(function() { updateHistory(true); }, 5000);
+        var ivId = setInterval(function() { updateHistory(true); }, 15000);
     }
     document.addEventListener("turbo:load", initHistoryValidasi);
 })();

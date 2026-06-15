@@ -27,15 +27,23 @@ class Wisata extends Model
         'slug',
         'harga_tiket',
         'harga_camping',
+        'stok',
         'deskripsi',
         'gambar',
         'galleries',
+        'jam_buka',
+        'jam_tutup',
+        'hari_buka',
+        'tanggal_tutup',
     ];
 
     protected $casts = [
-        'harga_tiket' => 'decimal:0',
+        'harga_tiket'   => 'decimal:0',
         'harga_camping' => 'decimal:0',
-        'galleries' => 'array',
+        'stok'          => 'integer',
+        'galleries'     => 'array',
+        'hari_buka'     => 'array',
+        'tanggal_tutup' => 'array',
     ];
 
     /** Slug Curug Cibarebeuy (varian penulisan): tiket camping berharga berbeda dari kunjungan. */
@@ -53,6 +61,39 @@ class Wisata extends Model
     public function hasCamping(): bool
     {
         return $this->harga_camping > 0;
+    }
+
+    /**
+     * Cek apakah wisata buka pada tanggal tertentu.
+     * Digunakan saat pembuatan tiket untuk validasi tanggal berkunjung.
+     */
+    public function isOpenOnDate(string $date): bool
+    {
+        // Jika tidak ada pengaturan hari buka, anggap buka setiap hari
+        $hariBuka = $this->hari_buka ?? [];
+        if (!empty($hariBuka)) {
+            $hariIndo = [
+                'Monday'    => 'Senin',
+                'Tuesday'   => 'Selasa',
+                'Wednesday' => 'Rabu',
+                'Thursday'  => 'Kamis',
+                'Friday'    => 'Jumat',
+                'Saturday'  => 'Sabtu',
+                'Sunday'    => 'Minggu',
+            ];
+            $namaHari = $hariIndo[date('l', strtotime($date))] ?? '';
+            if (!in_array($namaHari, $hariBuka, true)) {
+                return false;
+            }
+        }
+
+        // Cek tanggal tutup khusus
+        $tanggalTutup = $this->tanggal_tutup ?? [];
+        if (in_array($date, $tanggalTutup, true)) {
+            return false;
+        }
+
+        return true;
     }
 
     /** Harga camping — dari DB jika ada, fallback ke konstanta jika 0 tapi merupakan curug cibarebeuy (untuk safe fallback), tapi di DB sudah 25000. */

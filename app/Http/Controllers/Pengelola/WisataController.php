@@ -28,22 +28,35 @@ class WisataController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nama' => 'required|string|max:255',
-            'harga_tiket' => 'required|numeric|min:0',
+            'nama'          => 'required|string|max:255',
+            'harga_tiket'   => 'required|numeric|min:0',
             'harga_camping' => 'nullable|numeric|min:0',
-            'deskripsi' => 'nullable|string',
-            'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'stok'          => 'required|integer|min:0',
+            'deskripsi'     => 'nullable|string',
+            'gambar'        => 'nullable|image|mimes:jpeg,png,jpg|max:10240',
+            'jam_buka'      => 'nullable|date_format:H:i',
+            'jam_tutup'     => 'nullable|date_format:H:i',
+            'hari_buka'     => 'nullable|array',
+            'hari_buka.*'   => 'in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
+            'tanggal_tutup'   => 'nullable|array',
+            'tanggal_tutup.*' => 'nullable|date_format:Y-m-d',
         ], [
-            'nama.required' => 'Nama wisata wajib diisi.',
-            'harga_tiket.required' => 'Harga tiket wajib diisi.',
-            'harga_tiket.min' => 'Harga tiket tidak boleh negatif.',
+            'nama.required'       => 'Nama wisata wajib diisi.',
+            'harga_tiket.required'=> 'Harga tiket wajib diisi.',
+            'harga_tiket.min'     => 'Harga tiket tidak boleh negatif.',
+            'stok.required'       => 'Stok tiket wajib diisi.',
+            'stok.integer'        => 'Stok tiket harus berupa angka.',
+            'stok.min'            => 'Stok tiket tidak boleh negatif.',
         ]);
 
-        $validated['harga_tiket'] = (int) round($validated['harga_tiket']);
+        $validated['harga_tiket']   = (int) round($validated['harga_tiket']);
         $validated['harga_camping'] = $request->filled('harga_camping') ? (int) round((float)$request->input('harga_camping')) : 0;
+        $validated['hari_buka']     = $request->input('hari_buka', []);
+        // Filter tanggal kosong
+        $validated['tanggal_tutup'] = array_values(array_filter($request->input('tanggal_tutup', []), fn($t) => !empty($t)));
 
         if ($request->hasFile('gambar')) {
-            $validated['gambar'] = $request->file('gambar')->store('wisata', 'public');
+            $validated['gambar'] = cloudinary()->upload($request->file('gambar')->getRealPath())->getSecurePath();
         } else {
             unset($validated['gambar']);
         }
@@ -54,8 +67,7 @@ class WisataController extends Controller
 
     public function show(Wisata $wisata)
     {
-        $wisata->load(['reviews.user']);
-        return view('pengelola.wisata.show', compact('wisata'));
+        abort(404);
     }
 
     public function edit(Wisata $wisata)
@@ -66,26 +78,37 @@ class WisataController extends Controller
     public function update(Request $request, Wisata $wisata)
     {
         $validated = $request->validate([
-            'nama' => 'required|string|max:255',
-            'harga_tiket' => 'required|numeric|min:0',
+            'nama'          => 'required|string|max:255',
+            'harga_tiket'   => 'required|numeric|min:0',
             'harga_camping' => 'nullable|numeric|min:0',
-            'deskripsi' => 'nullable|string',
-            'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'stok'          => 'required|integer|min:0',
+            'deskripsi'     => 'nullable|string',
+            'gambar'        => 'nullable|image|mimes:jpeg,png,jpg|max:10240',
+            'jam_buka'      => 'nullable|date_format:H:i',
+            'jam_tutup'     => 'nullable|date_format:H:i',
+            'hari_buka'     => 'nullable|array',
+            'hari_buka.*'   => 'in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
+            'tanggal_tutup'   => 'nullable|array',
+            'tanggal_tutup.*' => 'nullable|date_format:Y-m-d',
         ], [
-            'nama.required' => 'Nama wisata wajib diisi.',
-            'harga_tiket.required' => 'Harga tiket wajib diisi.',
-            'harga_tiket.min' => 'Harga tiket tidak boleh negatif.',
+            'nama.required'       => 'Nama wisata wajib diisi.',
+            'harga_tiket.required'=> 'Harga tiket wajib diisi.',
+            'harga_tiket.min'     => 'Harga tiket tidak boleh negatif.',
+            'stok.required'       => 'Stok tiket wajib diisi.',
+            'stok.integer'        => 'Stok tiket harus berupa angka.',
+            'stok.min'            => 'Stok tiket tidak boleh negatif.',
         ]);
 
-        $validated['harga_tiket'] = (int) round($validated['harga_tiket']);
+        $validated['harga_tiket']   = (int) round($validated['harga_tiket']);
         $validated['harga_camping'] = $request->filled('harga_camping') ? (int) round((float)$request->input('harga_camping')) : 0;
-
+        $validated['hari_buka']     = $request->input('hari_buka', []);
+        $validated['tanggal_tutup'] = array_values(array_filter($request->input('tanggal_tutup', []), fn($t) => !empty($t)));
 
         if ($request->hasFile('gambar')) {
-            if ($wisata->gambar && Storage::disk('public')->exists($wisata->gambar)) {
+            if ($wisata->gambar && !str_starts_with($wisata->gambar, 'http') && Storage::disk('public')->exists($wisata->gambar)) {
                 Storage::disk('public')->delete($wisata->gambar);
             }
-            $validated['gambar'] = $request->file('gambar')->store('wisata', 'public');
+            $validated['gambar'] = cloudinary()->upload($request->file('gambar')->getRealPath())->getSecurePath();
         } else {
             unset($validated['gambar']);
         }
@@ -96,7 +119,7 @@ class WisataController extends Controller
 
     public function destroy(Wisata $wisata)
     {
-        if ($wisata->gambar && Storage::disk('public')->exists($wisata->gambar)) {
+        if ($wisata->gambar && !str_starts_with($wisata->gambar, 'http') && Storage::disk('public')->exists($wisata->gambar)) {
             Storage::disk('public')->delete($wisata->gambar);
         }
         $wisata->delete();
@@ -106,11 +129,11 @@ class WisataController extends Controller
     public function storeGallery(Request $request, Wisata $wisata)
     {
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'image' => 'required|image|mimes:jpeg,png,jpg|max:10240',
             'caption' => 'nullable|string|max:255',
         ]);
 
-        $path = $request->file('image')->store('wisata-gallery', 'public');
+        $path = cloudinary()->upload($request->file('image')->getRealPath())->getSecurePath();
 
         $galleries = $wisata->galleries ?? [];
         $galleries[] = [
@@ -123,7 +146,7 @@ class WisataController extends Controller
         return back()->with('success', 'Foto berhasil ditambahkan ke galeri.');
     }
 
-    public function destroyGallery(Wisata $wisata, $index)
+    public function destroyGallery(Wisata $wisata, int $index)
     {
         $galleries = $wisata->galleries ?? [];
 
@@ -138,7 +161,7 @@ class WisataController extends Controller
         }
 
         $imagePath = $galleries[$index]['image'];
-        if (Storage::disk('public')->exists($imagePath)) {
+        if (!str_starts_with($imagePath, 'http') && Storage::disk('public')->exists($imagePath)) {
             Storage::disk('public')->delete($imagePath);
         }
         unset($galleries[$index]);

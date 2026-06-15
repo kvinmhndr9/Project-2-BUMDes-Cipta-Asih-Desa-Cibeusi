@@ -34,7 +34,7 @@ class ProdukKhasController extends Controller
             'id_wisata' => 'nullable|exists:Wisata,id_wisata',
             'keterangan' => 'nullable|string',
             'urutan' => 'nullable|integer|min:0',
-            'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'gambar' => 'nullable|image|mimes:jpeg,png,jpg|max:10240',
         ], [
             'nama.required' => 'Nama produk wajib diisi.',
             'id_wisata.exists' => 'Tempat wisata tidak valid.',
@@ -43,7 +43,7 @@ class ProdukKhasController extends Controller
         $validated['urutan'] = (int) ($validated['urutan'] ?? 0);
 
         if ($request->hasFile('gambar')) {
-            $validated['gambar'] = $request->file('gambar')->store('produk-khas', 'public');
+            $validated['gambar'] = cloudinary()->upload($request->file('gambar')->getRealPath())->getSecurePath();
         } else {
             unset($validated['gambar']);
         }
@@ -54,7 +54,7 @@ class ProdukKhasController extends Controller
 
     public function show(ProdukKhas $produkKhas)
     {
-        return view('pengelola.produk-khas.show', compact('produkKhas'));
+        abort(404);
     }
 
     public function edit(ProdukKhas $produkKhas)
@@ -70,7 +70,7 @@ class ProdukKhasController extends Controller
             'id_wisata' => 'nullable|exists:Wisata,id_wisata',
             'keterangan' => 'nullable|string',
             'urutan' => 'nullable|integer|min:0',
-            'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'gambar' => 'nullable|image|mimes:jpeg,png,jpg|max:10240',
         ], [
             'nama.required' => 'Nama produk wajib diisi.',
             'id_wisata.exists' => 'Tempat wisata tidak valid.',
@@ -82,7 +82,7 @@ class ProdukKhasController extends Controller
             if ($produkKhas->gambar && !str_starts_with($produkKhas->gambar, 'http') && Storage::disk('public')->exists($produkKhas->gambar)) {
                 Storage::disk('public')->delete($produkKhas->gambar);
             }
-            $validated['gambar'] = $request->file('gambar')->store('produk-khas', 'public');
+            $validated['gambar'] = cloudinary()->upload($request->file('gambar')->getRealPath())->getSecurePath();
         } else {
             unset($validated['gambar']);
         }
@@ -103,11 +103,11 @@ class ProdukKhasController extends Controller
     public function storeGallery(Request $request, ProdukKhas $produkKhas)
     {
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'image' => 'required|image|mimes:jpeg,png,jpg|max:10240',
             'caption' => 'nullable|string|max:255',
         ]);
 
-        $path = $request->file('image')->store('produk-khas-gallery', 'public');
+        $path = cloudinary()->upload($request->file('image')->getRealPath())->getSecurePath();
 
         $galleries = $produkKhas->galleries ?? [];
         $galleries[] = [
@@ -125,7 +125,7 @@ class ProdukKhasController extends Controller
         
         if (isset($galleries[$index])) {
             $imagePath = $galleries[$index]['image'];
-            if (Storage::disk('public')->exists($imagePath)) {
+            if (!str_starts_with($imagePath, 'http') && Storage::disk('public')->exists($imagePath)) {
                 Storage::disk('public')->delete($imagePath);
             }
             unset($galleries[$index]);

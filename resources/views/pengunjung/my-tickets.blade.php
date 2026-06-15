@@ -110,7 +110,7 @@
 @if(!$tiket->isEmpty())
 <script>
 (function() {
-    var REALTIME_INTERVAL = 1500;
+    var REALTIME_INTERVAL = 5000;
     var tbody = document.getElementById('my-tickets-tbody');
     if (!tbody) return;
     var currentPage = parseInt('{{ $tiket->currentPage() }}', 10);

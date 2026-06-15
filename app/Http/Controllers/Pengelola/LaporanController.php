@@ -21,6 +21,7 @@ class LaporanController extends Controller
         $periode = $request->get('periode', 'hari'); // hari, minggu, bulan
         $tanggal = $request->get('tanggal', now()->format('Y-m-d'));
         $jenis   = $request->get('jenis', 'semua');
+        $wisata_id = $request->get('wisata_id', 'semua');
         
         $date = Carbon::parse($tanggal);
 
@@ -44,7 +45,12 @@ class LaporanController extends Controller
             $label = $date->translatedFormat('F Y');
         }
 
-        $wisatas = Wisata::all();
+        $semua_wisata = Wisata::all();
+        if ($wisata_id !== 'semua') {
+            $wisatas = Wisata::where('id_wisata', $wisata_id)->get();
+        } else {
+            $wisatas = Wisata::all();
+        }
         $laporan = collect();
 
         $totalTiketOnlineAll = 0;
@@ -95,7 +101,8 @@ class LaporanController extends Controller
         return view('pengelola.laporan.index', compact(
             'periode', 'tanggal', 'label', 'laporan', 
             'totalTiketOnlineAll', 'totalPendapatanOnlineAll',
-            'totalTiketOfflineAll', 'totalPendapatanOfflineAll', 'totalKeseluruhan', 'jenis'
+            'totalTiketOfflineAll', 'totalPendapatanOfflineAll', 'totalKeseluruhan', 'jenis',
+            'semua_wisata', 'wisata_id'
         ));
     }
 
@@ -104,6 +111,7 @@ class LaporanController extends Controller
         $periode = $request->get('periode', 'hari'); 
         $tanggal = $request->get('tanggal', now()->format('Y-m-d'));
         $jenis   = $request->get('jenis', 'semua');
+        $wisata_id = $request->get('wisata_id', 'semua');
         
         $date = Carbon::parse($tanggal);
 
@@ -126,7 +134,12 @@ class LaporanController extends Controller
             $label = $date->translatedFormat('F Y');
         }
 
-        $wisatas = Wisata::all();
+        $semua_wisata = Wisata::all();
+        if ($wisata_id !== 'semua') {
+            $wisatas = Wisata::where('id_wisata', $wisata_id)->get();
+        } else {
+            $wisatas = Wisata::all();
+        }
         $laporan = collect();
 
         $totalTiketOnlineAll = 0;
@@ -171,7 +184,8 @@ class LaporanController extends Controller
         return view('pengelola.laporan.print', compact(
             'periode', 'tanggal', 'label', 'laporan', 
             'totalTiketOnlineAll', 'totalPendapatanOnlineAll',
-            'totalTiketOfflineAll', 'totalPendapatanOfflineAll', 'totalKeseluruhan', 'jenis'
+            'totalTiketOfflineAll', 'totalPendapatanOfflineAll', 'totalKeseluruhan', 'jenis',
+            'semua_wisata', 'wisata_id'
         ));
     }
 }

@@ -18,7 +18,7 @@ class PengelolaDashboardController extends Controller
 
     public function index(Request $request)
     {
-        $periode = $request->get('periode', 'bulan');
+        $periode = $request->get('periode', 'hari');
         $tanggal = $request->get('tanggal', now()->format('Y-m-d'));
         $date = Carbon::parse($tanggal);
 
@@ -87,27 +87,33 @@ class PengelolaDashboardController extends Controller
 
         if ($request->expectsJson() || $request->ajax()) {
             $wisataData = $wisata->map(fn ($w) => [
-                'nama' => $w->nama,
-                'tiket_bulan_ini' => (int) ($w->tiket_online ?? 0) + (int) ($w->tiket_offline ?? 0),
-                'pendapatan_bulan_ini' => (float) ($w->pendapatan_online ?? 0) + (float) ($w->pendapatan_offline ?? 0),
+                'nama'                => $w->nama,
+                'tiket_bulan_ini'     => (int) ($w->tiket_online ?? 0) + (int) ($w->tiket_offline ?? 0),
+                'pendapatan_bulan_ini'=> (float) ($w->pendapatan_online ?? 0) + (float) ($w->pendapatan_offline ?? 0),
             ]);
             return response()->json([
-                'labelWaktu' => $labelWaktu,
-                'totalTiketBulan' => $totalTiket,
-                'totalPendapatanBulan' => $totalPendapatan,
-                'wisata' => $wisataData,
-                'chartData' => $chartData
+                'labelWaktu'          => $labelWaktu,
+                'totalTiketBulan'     => $totalTiket,
+                'totalPendapatanBulan'=> $totalPendapatan,
+                'wisata'              => $wisataData,
+                'chartData'           => $chartData,
+                'notifCount'          => (int) cache()->get('notif_pengelola', 0),
             ]);
         }
 
+        // Reset badge notifikasi saat pengelola buka dashboard
+        $notifCount = (int) cache()->get('notif_pengelola', 0);
+        cache()->forget('notif_pengelola');
+
         return view('pengelola.dashboard', [
-            'wisata' => $wisata,
-            'totalTiketBulan' => $totalTiket,
-            'totalPendapatanBulan' => $totalPendapatan,
-            'chartData' => $chartData,
-            'periode' => $periode,
-            'tanggal' => $tanggal,
-            'labelWaktu' => $labelWaktu,
+            'wisata'              => $wisata,
+            'totalTiketBulan'     => $totalTiket,
+            'totalPendapatanBulan'=> $totalPendapatan,
+            'chartData'           => $chartData,
+            'periode'             => $periode,
+            'tanggal'             => $tanggal,
+            'labelWaktu'          => $labelWaktu,
+            'notifCount'          => $notifCount,
         ]);
     }
 

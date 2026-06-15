@@ -1,9 +1,22 @@
-@extends('layouts.app')
+@extends('layouts.dashboard')
 
 @section('title', 'Dashboard Admin')
 
 @section('content')
 <h4 class="fs-4 fw-semibold mb-4">Dashboard Admin - {{ $wisata->nama }}</h4>
+
+{{-- Badge Notifikasi Tiket Baru --}}
+@if($notifCount > 0)
+<div class="alert alert-primary d-flex align-items-center gap-3 shadow-sm border-0 mb-4" id="notif-banner" role="alert">
+    <span class="badge bg-primary rounded-pill fs-6 px-3" id="notif-badge-count">{{ $notifCount }}</span>
+    <span><i class="bi bi-bell-fill me-1"></i> Ada <strong>{{ $notifCount }}</strong> tiket baru yang masuk sejak kunjungan terakhir Anda.</span>
+    <button type="button" class="btn-close ms-auto" onclick="document.getElementById('notif-banner').remove()"></button>
+</div>
+@else
+<div id="notif-banner" class="d-none">
+    <span id="notif-badge-count">0</span>
+</div>
+@endif
 
 <div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
     <div class="col">
@@ -51,20 +64,6 @@
                     <canvas id="pendapatanChart"></canvas>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
-
-<div class="card shadow-sm border-0">
-    <div class="card-body">
-        <h5 class="card-title fw-semibold mb-3">Aksi Cepat</h5>
-        <div class="d-flex flex-column flex-sm-row gap-2">
-            <a href="{{ route('admin.validasi.index') }}" class="btn btn-primary d-inline-flex align-items-center fw-medium">
-                <i class="bi bi-qr-code-scan me-2"></i> Scan QR Tiket
-            </a>
-            <a href="{{ route('admin.laporan') }}" class="btn btn-outline-secondary d-inline-flex align-items-center fw-medium">
-                <i class="bi bi-file-earmark-bar-graph me-2"></i> Lihat Laporan
-            </a>
         </div>
     </div>
 </div>
@@ -181,7 +180,7 @@
             }
         });
 
-        var REALTIME_INTERVAL = 1500;
+        var REALTIME_INTERVAL = 15000;
         var url = '{{ route("admin.dashboard") }}';
         function fmtRp(n) { return 'Rp ' + Number(n).toLocaleString('id-ID', { maximumFractionDigits: 0 }); }
         function fmtTgl(isoStr) { 
@@ -236,6 +235,21 @@
                             pendapatanChart.data.labels = data.chartData.labels;
                             pendapatanChart.data.datasets[0].data = data.chartData.pendapatan;
                             pendapatanChart.update('none');
+                        }
+                    }
+
+                    // Update notifikasi tiket baru
+                    if (data.notifCount !== undefined && data.notifCount > 0) {
+                        var banner = document.getElementById('notif-banner');
+                        var badgeEl = document.getElementById('notif-badge-count');
+                        if (banner && banner.classList.contains('d-none')) {
+                            banner.classList.remove('d-none');
+                            banner.classList.add('alert', 'alert-primary', 'd-flex', 'align-items-center', 'gap-3', 'shadow-sm', 'border-0', 'mb-4');
+                            banner.innerHTML = '<span class="badge bg-primary rounded-pill fs-6 px-3" id="notif-badge-count">' + data.notifCount + '</span>' +
+                                '<span><i class="bi bi-bell-fill me-1"></i> Ada <strong>' + data.notifCount + '</strong> tiket baru yang masuk.</span>' +
+                                '<button type="button" class="btn-close ms-auto" onclick="this.closest(\'#notif-banner\').classList.add(\'d-none\')"></button>';
+                        } else if (badgeEl) {
+                            badgeEl.textContent = data.notifCount;
                         }
                     }
                 })

@@ -60,15 +60,20 @@ class AdminDashboardController extends Controller
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
-                'wisata_nama' => $wisata->nama,
-                'hariIni' => $hariIni,
-                'bulanIni' => $bulanIni,
+                'wisata_nama'          => $wisata->nama,
+                'hariIni'              => $hariIni,
+                'bulanIni'             => $bulanIni,
                 'totalPendapatanBulan' => $totalPendapatanBulan,
-                'riwayatValidasi' => $riwayatValidasi,
-                'chartData' => $chartData
+                'riwayatValidasi'      => $riwayatValidasi,
+                'chartData'            => $chartData,
+                'notifCount'           => (int) cache()->get('notif_admin_' . $wisata->id, 0),
             ]);
         }
 
-        return view('admin.dashboard', compact('wisata', 'hariIni', 'bulanIni', 'totalPendapatanBulan', 'riwayatValidasi', 'chartData'));
+        // Reset badge notifikasi saat admin buka dashboard
+        $notifCount = (int) cache()->get('notif_admin_' . $wisata->id, 0);
+        cache()->forget('notif_admin_' . $wisata->id);
+
+        return view('admin.dashboard', compact('wisata', 'hariIni', 'bulanIni', 'totalPendapatanBulan', 'riwayatValidasi', 'chartData', 'notifCount'));
     }
 }

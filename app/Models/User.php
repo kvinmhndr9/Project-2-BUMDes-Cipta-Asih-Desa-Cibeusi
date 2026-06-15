@@ -3,14 +3,15 @@
 namespace App\Models;
 
 use App\Models\Concerns\ExposesPrimaryKeyAsId;
+use App\Notifications\VerifyEmailOtpNotification;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use ExposesPrimaryKeyAsId;
     use HasApiTokens, HasFactory, Notifiable;
@@ -34,6 +35,8 @@ class User extends Authenticatable
         'google_id',
         'avatar',
         'asal_kota',
+        'verification_code',
+        'verification_code_expires_at',
     ];
 
     /**
@@ -52,8 +55,24 @@ class User extends Authenticatable
      * @var array<string, string>
      */
     protected $casts = [
-        'email_verified_at' => 'datetime',
+        'email_verified_at'            => 'datetime',
+        'verification_code_expires_at' => 'datetime',
     ];
+
+    /**
+     * Kirim kode OTP 6 angka ke email user sebagai pengganti link verifikasi default.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $code = (string) random_int(100000, 999999);
+
+        $this->forceFill([
+            'verification_code'            => $code,
+            'verification_code_expires_at' => now()->addMinutes(30),
+        ])->save();
+
+        $this->notify(new VerifyEmailOtpNotification($code, $this->name));
+    }
 
     public function wisata()
     {
@@ -79,4 +98,16 @@ class User extends Authenticatable
     {
         return $this->role === 'pengelola_bumdes';
     }
+
+    /**
+     * Get the user's avatar.
+     *
+     * @param  string|null  $value
+     * @return string
+     */
+    public function getAvatarAttribute($value)
+    {
+        return $value ?: asset('images/default-avatar.svg');
+    }
 }
+

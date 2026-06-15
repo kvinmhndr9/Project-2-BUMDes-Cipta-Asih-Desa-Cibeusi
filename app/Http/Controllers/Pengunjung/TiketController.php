@@ -21,7 +21,7 @@ class TiketController extends Controller
     public function index()
     {
         $wisata = Wisata::orderBy('nama')->get();
-        return view('pengunjung.wisata-index', compact('wisata'));
+        return view('publik.wisata-index', compact('wisata'));
     }
 
     public function create(Wisata $wisata)
@@ -43,6 +43,19 @@ class TiketController extends Controller
             $rules['camping'] = ['required', 'in:Ya,Tidak'];
         }
         $validated = $request->validate($rules);
+
+        // Validasi hari operasional & tanggal tutup wisata
+        if (!$wisata->isOpenOnDate($validated['tanggal_berkunjung'])) {
+            $hariIndo = [
+                'Monday'=>'Senin','Tuesday'=>'Selasa','Wednesday'=>'Rabu',
+                'Thursday'=>'Kamis','Friday'=>'Jumat','Saturday'=>'Sabtu','Sunday'=>'Minggu',
+            ];
+            $namaHari = $hariIndo[date('l', strtotime($validated['tanggal_berkunjung']))] ?? '';
+            return back()->withInput()->withErrors([
+                'tanggal_berkunjung' => "Wisata {$wisata->nama} tutup pada tanggal tersebut ({$namaHari}). Silakan pilih tanggal lain.",
+            ]);
+        }
+
         // Total pembayaran hanya tiket wisata; parkir dibayar manual di lokasi
         // Curug Cibarebeuy: Camping = Rp 25.000/tiket, bukan Camping = harga_tiket (Rp 10.000)
         $hargaPerTiket = (int) $wisata->harga_tiket;
@@ -67,14 +80,11 @@ class TiketController extends Controller
         $tiket = Tiket::create($data);
 
         // Coba buat transaksi Midtrans; jika tidak dikonfigurasi, pakai simulasi
-        $midtrans = new MidtransService;
+        $midtrans = app(MidtransService::class);
         $snapToken = $midtrans->createTransaction($tiket);
 
         if ($snapToken) {
-            return view('pengunjung.tiket-bayar', [
-                'tiket' => $tiket->load('wisata', 'user'),
-                'snap_token' => $snapToken,
-            ]);
+            return redirect()->route('pengunjung.tiket.show', $tiket)->with('success', 'Pemesanan tiket berhasil. Silakan selesaikan pembayaran.');
         }
 
         // Mode simulasi dinonaktifkan: jika Midtrans gagal, arahkan ke detail tiket dengan pesan error
@@ -92,8 +102,8 @@ class TiketController extends Controller
         if ($tiket->status !== 'pending') {
             return redirect()->route('pengunjung.tiket.show', $tiket)->with('info', 'Tiket ini sudah dibayar.');
         }
-        $tiket->load('wisata', 'user');
-        $midtrans = new MidtransService;
+        $tiket->load(['wisata', 'user']);
+        $midtrans = app(MidtransService::class);
         $snapToken = $midtrans->createTransaction($tiket);
 
         if ($snapToken) {
@@ -127,6 +137,36 @@ class TiketController extends Controller
         }
 
         return view('pengunjung.tiket-show', compact('tiket'));
+    }
+
+    public function reschedule(Request $request, Tiket $tiket)
+    {
+        if ($tiket->id_user !== auth()->id()) {
+            abort(403);
+        }
+
+        if (!in_array($tiket->status, ['pending', 'paid'])) {
+            return back()->with('error', 'Tiket tidak dapat diubah jadwalnya karena sudah berstatus ' . $tiket->status);
+        }
+
+        if ($tiket->status === 'paid' && $tiket->reschedule_count >= 1) {
+            return back()->with('error', 'Tiket yang sudah dibayar hanya dapat diubah jadwalnya maksimal 1 kali.');
+        }
+
+        $validated = $request->validate([
+            'tanggal_berkunjung' => ['required', 'date', 'after_or_equal:today'],
+        ], [
+            'tanggal_berkunjung.after_or_equal' => 'Tanggal kunjungan baru minimal adalah hari ini.',
+        ]);
+
+        $updates = ['tanggal_berkunjung' => $validated['tanggal_berkunjung']];
+        if ($tiket->status === 'paid') {
+            $updates['reschedule_count'] = $tiket->reschedule_count + 1;
+        }
+
+        $tiket->update($updates);
+
+        return back()->with('success', 'Jadwal kunjungan berhasil diubah menjadi ' . \Carbon\Carbon::parse($validated['tanggal_berkunjung'])->translatedFormat('d F Y') . '.');
     }
 
     public function myTickets(Request $request)
@@ -171,42 +211,63 @@ class TiketController extends Controller
             abort(403);
         }
 
-        // Pastikan relasi wisata ter-load
         $tiket->load('wisata');
-
         $download = $request->boolean('download');
-        
-        // Generate content QR
-        $content = $tiket->qr_content;
-        
-        if (empty($content)) {
-            $content = $tiket->kode_tiket; // Fallback ke kode saja jika qr_content gagal
-        }
+
+        // ── QR berisi URL halaman e-tiket publik ─────────────────────────────
+        // Saat di-scan, langsung membuka halaman desain tiket premium
+        $content = route('tiket.publik', $tiket->kode_tiket);
 
         try {
             $svg = QrCode::size(240)->generate($content);
             $res = response($svg)
                 ->header('Content-Type', 'image/svg+xml')
                 ->header('Cache-Control', 'private, max-age=3600');
-            
+
             if ($download) {
-                $filename = 'QR-' . $tiket->kode_tiket . '.svg';
+                $filename = 'E-Tiket-' . $tiket->kode_tiket . '.svg';
                 $res->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
             }
             return $res;
         } catch (\Throwable $e) {
             Log::error('QR local generation failed: ' . $e->getMessage());
-            
-            // Jika gagal, return SVG sederhana dengan kode tiket sebagai text
+
+            // Fallback: SVG sederhana
             $svg = '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="#f0f0f0"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#999" font-family="Arial" font-size="12">' . htmlspecialchars($tiket->kode_tiket) . '</text></svg>';
             $res = response($svg)->header('Content-Type', 'image/svg+xml');
             if ($download) {
-                $filename = 'QR-' . $tiket->kode_tiket . '.svg';
-                $res->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+                $res->header('Content-Disposition', 'attachment; filename="E-Tiket-' . $tiket->kode_tiket . '.svg"');
             }
             return $res;
         }
     }
 
+    /**
+     * Batalkan tiket — hanya untuk status pending.
+     * Tiket yang sudah paid tidak bisa dibatalkan melalui sistem.
+     */
+    public function cancel(Request $request, Tiket $tiket)
+    {
+        if ($tiket->id_user !== auth()->id()) {
+            abort(403);
+        }
+
+        if ($tiket->status !== 'pending') {
+            return back()->with('error', 'Hanya tiket berstatus "Menunggu Pembayaran" yang dapat dibatalkan.');
+        }
+
+        $validated = $request->validate([
+            'cancel_reason' => 'nullable|string|max:255',
+        ]);
+
+        $tiket->update([
+            'status'        => 'cancelled',
+            'cancelled_at'  => now(),
+            'cancel_reason' => $validated['cancel_reason'] ?? null,
+        ]);
+
+        return redirect()->route('pengunjung.tiket.my')
+            ->with('success', 'Tiket ' . $tiket->kode_tiket . ' berhasil dibatalkan.');
+    }
 
 }

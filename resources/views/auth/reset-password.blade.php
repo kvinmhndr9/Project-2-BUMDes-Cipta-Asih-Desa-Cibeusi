@@ -2,27 +2,7 @@
 
 @section('title', 'Reset Kata Sandi')
 
-@push('styles')
-<style>
-    .password-wrapper { position: relative; }
-    .password-wrapper .form-control { padding-right: 2.8rem; }
-    .toggle-password {
-        position: absolute;
-        right: 0.75rem;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        padding: 0;
-        color: #adb5bd;
-        cursor: pointer;
-        font-size: 1rem;
-        line-height: 1;
-        transition: color 0.2s;
-    }
-    .toggle-password:hover { color: #6c757d; }
-</style>
-@endpush
+
 
 @section('content')
 <div class="row justify-content-center">
@@ -30,10 +10,7 @@
         <div class="card shadow-sm border-0 rounded-3">
             <div class="card-body p-4 p-md-5">
                 <div class="text-center mb-4">
-                    <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 rounded-circle mb-3" style="width:56px;height:56px">
-                        <i class="bi bi-shield-lock fs-4 text-success"></i>
-                    </div>
-                    <h4 class="fw-semibold mb-1">Buat Kata Sandi Baru</h4>
+                    <h4 class="fw-semibold mb-1" style="background: linear-gradient(90deg, #00b4d8, #2d6a4f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Buat Kata Sandi Baru</h4>
                     <p class="text-muted small mb-0">Pastikan kata sandi baru Anda kuat dan mudah diingat.</p>
                 </div>
 
@@ -47,17 +24,8 @@
                     --}}
                     <input type="hidden" name="token" value="{{ $token }}">
 
-                    <div class="mb-3">
-                        <label class="form-label fw-medium">Email</label>
-                        <input type="email" name="email"
-                            class="form-control @error('email') is-invalid @enderror"
-                            value="{{ old('email', $email) }}"
-                            placeholder="nama@email.com"
-                            required autofocus>
-                        @error('email')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+                    {{-- Email disembunyikan — sudah terisi otomatis dari link reset --}}
+                    <input type="hidden" name="email" value="{{ old('email', $email) }}">
 
                     <div class="mb-3">
                         <label class="form-label fw-medium">Kata Sandi Baru</label>
@@ -87,7 +55,7 @@
                     </div>
 
                     <button type="submit" class="btn btn-success w-100 py-2 fw-medium">
-                        <i class="bi bi-check-lg me-1"></i> Simpan Kata Sandi Baru
+                        Simpan Kata Sandi Baru
                     </button>
                 </form>
             </div>

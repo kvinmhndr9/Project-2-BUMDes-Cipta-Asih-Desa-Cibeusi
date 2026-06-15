@@ -188,10 +188,10 @@
                 <th rowspan="2" style="width: 5%;">No</th>
                 <th rowspan="2" style="width: 25%;">Nama Wisata</th>
                 @if($jenis == 'semua' || $jenis == 'online')
-                <th colspan="2">Jalur Online</th>
+                <th colspan="2">Penjualan Online</th>
                 @endif
                 @if($jenis == 'semua' || $jenis == 'offline')
-                <th colspan="2">Jalur Offline (Fisik)</th>
+                <th colspan="2">Penjualan Offline</th>
                 @endif
                 <th rowspan="2" style="width: 15%;">Total Pendapatan</th>
             </tr>
@@ -249,10 +249,7 @@
     <div class="signature-area">
         <div class="signature-box">
             <p style="margin-bottom: 5px;">Subang, {{ \Carbon\Carbon::now()->translatedFormat('d F Y') }}</p>
-            <p style="margin-top: 0;">Pengelola BUMDes Siasih,</p>
-            
             <div class="tandatangan-space"></div>
-            
             <p style="text-decoration: underline; font-weight: bold; margin-bottom: 0;">{{ Auth::user()->name }}</p>
         </div>
     </div>

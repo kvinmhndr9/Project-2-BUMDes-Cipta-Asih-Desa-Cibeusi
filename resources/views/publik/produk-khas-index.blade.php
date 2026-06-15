@@ -6,7 +6,7 @@
 <div class="container py-4">
     <div class="row mb-4">
         <div class="col-12 text-center" data-aos="fade-down">
-            <h1 class="fw-bold text-primary">Produk Khas Cibeusi</h1>
+            <h1 class="fw-bold text-primary">Produk Khas Desa Cibeusi</h1>
             <p class="text-muted">Temukan kerajinan dan kuliner otentik dari warga lokal</p>
         </div>
     </div>

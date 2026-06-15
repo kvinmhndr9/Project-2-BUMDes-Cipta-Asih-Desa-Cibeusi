@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.dashboard')
 
 @section('title', 'Laporan Gabungan')
 
@@ -33,9 +33,9 @@
         <div id="laporan-content" class="px-3 px-lg-0 py-3 py-lg-0">
             <h5 id="laporan-label" class="card-title fw-semibold">{{ $label }}</h5>
             <p class="text-muted mt-1 mb-4">Total tiket: <strong id="laporan-total-tiket">{{ $totalTiket }}</strong> | Total pendapatan: <strong id="laporan-total-pendapatan" class="text-success">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</strong></p>
-            <div class="table-responsive">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                 <table class="table table-hover table-striped align-middle mb-0">
-                    <thead class="table-light">
+                    <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
                         <tr>
                             <th class="text-uppercase text-secondary small">Wisata</th>
                             <th class="text-uppercase text-secondary small text-center">Transaksi</th>
@@ -89,8 +89,12 @@
             method: 'GET',
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         })
-        .then(function(r) { return r.json(); })
+        .then(function(r) { 
+            if (!r.ok) return null;
+            return r.json(); 
+        })
         .then(function(data) {
+            if (!data) return;
             if (labelEl) labelEl.textContent = data.label;
             if (totalTiketEl) totalTiketEl.textContent = data.totalTiket;
             if (totalPendapatanEl) totalPendapatanEl.textContent = formatRupiah(data.totalPendapatan);
@@ -114,7 +118,7 @@
     if (form && periode && tanggal) {
         periode.addEventListener('change', function() { updateLaporan(false); });
         tanggal.addEventListener('change', function() { updateLaporan(false); });
-        setInterval(function() { updateLaporan(true); }, 1500);
+        setInterval(function() { updateLaporan(true); }, 15000);
     }
 })();
 </script>

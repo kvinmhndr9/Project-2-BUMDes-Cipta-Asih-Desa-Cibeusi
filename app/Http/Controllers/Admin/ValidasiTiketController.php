@@ -22,20 +22,35 @@ class ValidasiTiketController extends Controller
 
     public function cari(Request $request)
     {
-        $request->validate(['kode' => 'required|string|max:50']);
-        $kode = strtoupper(trim($request->kode));
+        if (!$request->filled('kode')) {
+            return redirect()->route('admin.validasi.index')->with('error', 'Silakan masukkan atau scan kode tiket terlebih dahulu.');
+        }
+
+        $request->validate(['kode' => 'required|string|max:255']);
+        $input = trim($request->kode);
+
+        // ── Ekstrak kode dari URL jika QR berisi URL halaman e-tiket publik ──
+        // Contoh: https://domain.com/tiket/SI-MQHGYPQM → SI-MQHGYPQM
+        if (filter_var($input, FILTER_VALIDATE_URL) || str_contains($input, '/tiket/')) {
+            $parsed = parse_url($input, PHP_URL_PATH);
+            $segments = array_filter(explode('/', $parsed));
+            // Ambil segmen terakhir sebagai kode tiket
+            $input = end($segments) ?: $input;
+        }
+
+        $kode = strtoupper($input);
 
         $tiket = Tiket::with(['wisata', 'user'])
             ->where('kode_tiket', $kode)
             ->first();
 
         if (! $tiket) {
-            return back()->with('error', 'Tiket dengan kode ' . $kode . ' tidak ditemukan.');
+            return redirect()->route('admin.validasi.index')->with('error', 'Tiket dengan kode ' . $kode . ' tidak ditemukan.');
         }
 
         $user = Auth::user();
         if ($tiket->id_wisata !== $user->id_wisata) {
-            return back()->with('error', 'Tiket ini bukan untuk wisata Anda (' . $user->wisata->nama . ').');
+            return redirect()->route('admin.validasi.index')->with('error', 'Tiket ini bukan untuk wisata Anda (' . $user->wisata->nama . ').');
         }
 
         return view('admin.validasi-detail', compact('tiket'));
@@ -49,10 +64,17 @@ class ValidasiTiketController extends Controller
         }
 
         if ($tiket->status === 'used') {
-            return back()->with('error', 'Tiket ini sudah divalidasi sebelumnya.');
+            return redirect()->route('admin.validasi.index')->with('error', 'Tiket ini sudah divalidasi sebelumnya.');
         }
         if ($tiket->status !== 'paid') {
-            return back()->with('error', 'Hanya tiket yang sudah dibayar yang dapat divalidasi. Status saat ini: ' . ucfirst($tiket->status));
+            return redirect()->route('admin.validasi.index')->with('error', 'Hanya tiket yang sudah dibayar yang dapat divalidasi. Status saat ini: ' . ucfirst($tiket->status));
+        }
+
+        /** @var Carbon $tanggalBerkunjung */
+        $tanggalBerkunjung = Carbon::parse($tiket->tanggal_berkunjung);
+
+        if ($tanggalBerkunjung->toDateString() !== now()->toDateString()) {
+            return redirect()->route('admin.validasi.index')->with('error', 'Tiket ini hanya berlaku untuk tanggal ' . $tanggalBerkunjung->translatedFormat('d F Y') . '. Validasi gagal karena bukan untuk hari ini.');
         }
 
         $tiket->update([

@@ -19,7 +19,7 @@
             <div class="card-body text-center p-4">
                 <div class="position-relative d-inline-block mb-3">
                     @if($user->avatar)
-                        <img src="{{ $user->avatar }}" alt="Avatar" class="rounded-circle" width="100" height="100" style="object-fit:cover;" id="avatarPreview">
+                        <img src="{{ $user->avatar }}" onerror="this.onerror=null; this.src='/images/default-avatar.svg';" alt="Avatar" class="rounded-circle user-avatar-img" width="100" height="100" style="object-fit:cover;" id="avatarPreview">
                     @else
                         <div id="avatarPlaceholder" class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 100px; height: 100px; font-size: 2.5rem;">
                             {{ strtoupper(substr($user->name, 0, 1)) }}
@@ -68,7 +68,8 @@
                     @method('PUT')
                     
                     <div class="d-none">
-                        <input type="file" id="avatar" name="avatar" accept="image/*" onchange="previewAvatar(this)">
+                        <input type="file" id="avatar" name="avatar" accept="image/jpeg,image/png,image/jpg" onchange="openGlobalCrop(this, { aspectRatio: 1, onApply: applyProfilCrop })">
+                        <input type="hidden" id="avatar_cropped" name="avatar_cropped">
                     </div>
                     @error('avatar')<div class="text-danger small mb-3">{{ $message }}</div>@enderror
 
@@ -97,8 +98,7 @@
                         @error('asal_kota')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     
-                    <div class="d-flex justify-content-between align-items-center mt-4">
-                        <a href="{{ route('password.edit') }}" class="btn btn-outline-secondary px-4 fw-medium"><i class="bi bi-key me-2"></i>Ubah Kata Sandi</a>
+                    <div class="d-flex justify-content-end mt-4">
                         <button type="submit" class="btn btn-primary px-4 fw-medium">Simpan Perubahan</button>
                     </div>
                 </form>
@@ -130,6 +130,7 @@
                     </div>
 
                     <!-- Modal Edit Review -->
+                    @push('modals')
                     <div class="modal fade" id="editReviewModal{{ $r->id }}" tabindex="-1" aria-labelledby="editReviewModalLabel{{ $r->id }}" aria-hidden="true">
                         <div class="modal-dialog">
                             <div class="modal-content">
@@ -150,14 +151,15 @@
                                             <textarea name="comment" class="form-control" rows="3" placeholder="Tulis pengalaman Anda di sini...">{{ $r->comment }}</textarea>
                                         </div>
                                     </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                                        <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                                    <div class="modal-footer border-0 bg-light">
+                                        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                                        <button type="submit" class="btn btn-primary rounded-pill px-4">Simpan Perubahan</button>
                                     </div>
                                 </form>
                             </div>
                         </div>
                     </div>
+                    @endpush
                 @empty
                     <div class="text-center">
                         <p class="text-muted mb-0 small">Anda belum memberikan ulasan wisata apa pun. Kunjungi wisata untuk memberikan rating!</p>
@@ -168,31 +170,76 @@
     </div>
 </div>
 
+@push('modals')
+<x-crop-modal />
+@endpush
+
 @push('scripts')
 <script>
-function previewAvatar(input) {
-    if (input.files && input.files[0]) {
-        // Validate file size (2MB)
-        if (input.files[0].size > 2 * 1024 * 1024) {
-            alert('Ukuran file maksimal 2MB.');
-            input.value = '';
-            return;
-        }
-        
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            var preview = document.getElementById('avatarPreview');
-            var placeholder = document.getElementById('avatarPlaceholder');
-            
-            preview.src = e.target.result;
-            preview.classList.remove('d-none');
-            
-            if (placeholder) {
-                placeholder.classList.add('d-none');
-            }
-        }
-        reader.readAsDataURL(input.files[0]);
+function showToast(message, type = 'success') {
+    const id = 'toast_' + Date.now();
+    const icon = type === 'success'
+        ? '<i class="bi bi-check-circle-fill me-2"></i>'
+        : '<i class="bi bi-x-circle-fill me-2"></i>';
+    const bg = type === 'success' ? 'bg-success' : 'bg-danger';
+    const html = `
+        <div id="${id}" class="toast align-items-center text-white ${bg} border-0 shadow"
+             role="alert" aria-live="assertive" data-bs-autohide="true" data-bs-delay="3500">
+            <div class="d-flex">
+                <div class="toast-body fw-semibold">${icon}${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>`;
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
     }
+    container.insertAdjacentHTML('beforeend', html);
+    const el = document.getElementById(id);
+    new bootstrap.Toast(el).show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
+}
+
+function applyProfilCrop(blob, base64) {
+    // Update all user avatar images on the page immediately with the base64 preview
+    document.querySelectorAll('.user-avatar-img').forEach(img => {
+        img.src = base64;
+        img.classList.remove('d-none');
+    });
+
+    const placeholder = document.getElementById('avatarPlaceholder');
+    if (placeholder) placeholder.classList.add('d-none');
+
+    document.getElementById('avatar').value = '';
+
+    fetch('{{ route("pengunjung.profil.avatar") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json',
+        },
+        body: JSON.stringify({ avatar_cropped: base64 }),
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // Update all user avatar images on the page with the final Cloudinary URL
+            document.querySelectorAll('.user-avatar-img').forEach(img => {
+                img.src = data.avatar_url;
+            });
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message || 'Gagal menyimpan foto.', 'error');
+        }
+    })
+    .catch(() => {
+        showToast('Terjadi kesalahan jaringan. Coba lagi.', 'error');
+    });
 }
 </script>
 @endpush

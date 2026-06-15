@@ -32,7 +32,10 @@
                     @csrf
                     <div class="row g-2 align-items-center">
                         <div class="col-md-5">
-                            <input type="file" name="image" class="form-control" required accept="image/*">
+                            <input type="file" name="image" class="form-control" required accept="image/jpeg,image/png,image/jpg" onchange="openGlobalCrop(this, { previewContainerId: 'preview-gallery-baru' })">
+                            <div class="mt-2 d-none">
+                                <img id="preview-gallery-baru" src="" alt="Preview" class="img-thumbnail" style="max-height: 100px;">
+                            </div>
                         </div>
                         <div class="col-md-5">
                             <input type="text" name="caption" class="form-control" placeholder="Keterangan foto (opsional)">
@@ -102,4 +105,5 @@ document.querySelectorAll('.btn-hapus-foto').forEach(btn => {
 });
 </script>
 @endpush
+<x-crop-modal />
 @endsection

@@ -48,9 +48,13 @@
                     </div>
                     
                     <div class="mb-4">
-                        <label for="gambar" class="form-label fw-medium">Gambar</label>
-                        <input type="file" name="gambar" id="gambar" accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" class="form-control @error('gambar') is-invalid @enderror">
-                        <div class="form-text">Maks. 2MB. Format: jpeg, png, jpg, gif, webp.</div>
+                        <label for="gambar" class="form-label fw-medium">Gambar Produk <span class="text-danger">*</span></label>
+                        <input type="file" name="gambar" id="gambar" accept="image/jpeg,image/png,image/jpg" class="form-control @error('gambar') is-invalid @enderror" onchange="openGlobalCrop(this, { previewContainerId: 'preview-gambar', aspectRatio: 1 })" required>
+                        <div class="form-text">Maks. 10MB. Format: jpeg, png, jpg. Rekomendasi rasio 1:1.</div>
+                        <div class="mt-2 d-none">
+                            <p class="small text-muted mb-1">Pratinjau Foto:</p>
+                            <img id="preview-gambar" src="" alt="Preview" class="img-thumbnail" style="max-height: 200px;">
+                        </div>
                         @error('gambar')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     
@@ -63,4 +67,5 @@
         </div>
     </div>
 </div>
+<x-crop-modal />
 @endsection

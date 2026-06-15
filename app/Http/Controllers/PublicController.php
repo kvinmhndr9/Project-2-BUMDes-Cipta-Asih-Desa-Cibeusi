@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Wisata;
 use App\Models\ProdukKhas;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class PublicController extends Controller
@@ -21,7 +22,9 @@ class PublicController extends Controller
         // Cek apakah pengunjung yang login punya tiket used untuk wisata ini
         // dan belum memberikan ulasan (untuk form ulasan langsung di halaman wisata)
         $tiketBisaUlasan = null;
-        if (auth()->check() && auth()->user()->isPengunjung()) {
+        /** @var User|null $currentUser */
+        $currentUser = auth()->user();
+        if (auth()->check() && $currentUser && $currentUser->isPengunjung()) {
             $tiketBisaUlasan = \App\Models\Tiket::where('id_wisata', $wisata->id_wisata)
                 ->where('id_user', auth()->id())
                 ->where('status', 'used')
@@ -47,44 +50,68 @@ class PublicController extends Controller
 
     public function getWeather()
     {
-        // Cache data cuaca selama 30 menit
-        return cache()->remember('openmeteo_weather_cibeusi', 1800, function () {
+        // Cache data cuaca selama 10 menit agar lebih sering diperbarui
+        return cache()->remember('bmkg_weather_cibeusi', 600, function () {
             try {
-                // Koordinat GPS dari Plus Code 7M3G+585 (Parkiran Curug Cibareubeuy, Cibeusi, Ciater, Subang)
-                $url = 'https://api.open-meteo.com/v1/forecast?latitude=-6.7461&longitude=107.7288&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=Asia%2FJakarta';
-                
+                // API BMKG resmi - Desa Cibeusi, Kec. Ciater, Kab. Subang
+                $url = 'https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=32.13.29.2004';
+
                 $ch = curl_init();
                 curl_setopt($ch, CURLOPT_URL, $url);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
                 curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'SIASIH-Weather/1.0');
                 $response = curl_exec($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
 
                 if ($httpCode != 200 || empty($response)) {
-                    throw new \Exception('Gagal mengambil data cuaca');
+                    throw new \Exception('Gagal mengambil data cuaca dari BMKG');
                 }
 
                 $data = json_decode($response, true);
-                if (!$data || !isset($data['current'])) {
-                    throw new \Exception('Format data cuaca tidak valid');
+                if (!$data || !isset($data['data'][0]['cuaca'])) {
+                    throw new \Exception('Format data BMKG tidak valid');
                 }
 
-                $current = $data['current'];
-                $weatherCode = $current['weather_code'];
-                $info = $this->parseWmoWeatherCode($weatherCode);
+                // Ambil semua slot cuaca (array of arrays per hari), flatten jadi 1 array
+                $allSlots = array_merge(...$data['data'][0]['cuaca']);
+
+                // Cari slot cuaca paling dekat dengan waktu lokal sekarang
+                $nowTs = time() + (7 * 3600); // WIB = UTC+7
+                $closest = null;
+                $minDiff = PHP_INT_MAX;
+
+                foreach ($allSlots as $slot) {
+                    $slotTs = strtotime($slot['local_datetime']);
+                    $diff = abs($nowTs - $slotTs);
+                    if ($diff < $minDiff) {
+                        $minDiff = $diff;
+                        $closest = $slot;
+                    }
+                }
+
+                if (!$closest) {
+                    throw new \Exception('Tidak ada data cuaca tersedia');
+                }
+
+                $weatherCode = $closest['weather'];
+                $info = $this->parseBmkgWeatherCode($weatherCode, $closest['weather_desc']);
 
                 $cuaca = [
-                    'suhu' => round($current['temperature_2m']) . '°C',
-                    'kelembaban' => $current['relative_humidity_2m'] . '%',
-                    'angin' => round($current['wind_speed_10m']) . ' km/jam',
-                    'kondisi' => $info['kondisi'],
-                    'icon' => $info['icon']
+                    'suhu'       => $closest['t'] . '°C',
+                    'kelembaban' => $closest['hu'] . '%',
+                    'angin'      => round($closest['ws']) . ' km/jam',
+                    'kondisi'    => $closest['weather_desc'],
+                    'icon'       => $info['icon'],
+                    'arah_angin' => $closest['wd'] ?? '-',
+                    'jarak_pandang' => $closest['vs_text'] ?? '-',
+                    'sumber'     => 'BMKG',
                 ];
 
                 return response()->json([
                     'success' => true,
-                    'data' => $cuaca
+                    'data'    => $cuaca,
                 ]);
 
             } catch (\Exception $e) {
@@ -96,41 +123,44 @@ class PublicController extends Controller
         });
     }
 
-    private function parseWmoWeatherCode($kode)
+
+    private function parseBmkgWeatherCode($kode, $desc = '')
     {
-        // WMO Weather interpretation codes (Open-Meteo)
-        $kode = (int)$kode;
+        // Kode cuaca BMKG resmi (https://www.bmkg.go.id/cuaca/prakiraan-cuaca.bmkg)
+        $kode = (int) $kode;
         $map = [
-            0 => ['kondisi' => 'Cerah', 'icon' => 'bi-sun'],
-            1 => ['kondisi' => 'Cerah Berawan', 'icon' => 'bi-cloud-sun'],
-            2 => ['kondisi' => 'Berawan', 'icon' => 'bi-cloud'],
-            3 => ['kondisi' => 'Mendung', 'icon' => 'bi-clouds'],
-            45 => ['kondisi' => 'Berkabut', 'icon' => 'bi-cloud-fog'],
-            48 => ['kondisi' => 'Kabut Rime', 'icon' => 'bi-cloud-fog2'],
-            51 => ['kondisi' => 'Gerimis Ringan', 'icon' => 'bi-cloud-drizzle'],
-            53 => ['kondisi' => 'Gerimis Sedang', 'icon' => 'bi-cloud-drizzle'],
-            55 => ['kondisi' => 'Gerimis Lebat', 'icon' => 'bi-cloud-drizzle'],
-            56 => ['kondisi' => 'Gerimis Beku Ringan', 'icon' => 'bi-cloud-drizzle'],
-            57 => ['kondisi' => 'Gerimis Beku Lebat', 'icon' => 'bi-cloud-drizzle'],
-            61 => ['kondisi' => 'Hujan Ringan', 'icon' => 'bi-cloud-rain'],
-            63 => ['kondisi' => 'Hujan Sedang', 'icon' => 'bi-cloud-rain'],
-            65 => ['kondisi' => 'Hujan Lebat', 'icon' => 'bi-cloud-rain-heavy'],
-            66 => ['kondisi' => 'Hujan Beku Ringan', 'icon' => 'bi-cloud-rain'],
-            67 => ['kondisi' => 'Hujan Beku Lebat', 'icon' => 'bi-cloud-rain-heavy'],
-            71 => ['kondisi' => 'Salju Ringan', 'icon' => 'bi-snow'],
-            73 => ['kondisi' => 'Salju Sedang', 'icon' => 'bi-snow'],
-            75 => ['kondisi' => 'Salju Lebat', 'icon' => 'bi-snow'],
-            77 => ['kondisi' => 'Butiran Salju', 'icon' => 'bi-snow'],
-            80 => ['kondisi' => 'Hujan Lokal Ringan', 'icon' => 'bi-cloud-rain'],
-            81 => ['kondisi' => 'Hujan Lokal Sedang', 'icon' => 'bi-cloud-rain-heavy'],
-            82 => ['kondisi' => 'Hujan Lokal Lebat', 'icon' => 'bi-cloud-rain-heavy'],
-            85 => ['kondisi' => 'Hujan Salju Ringan', 'icon' => 'bi-snow'],
-            86 => ['kondisi' => 'Hujan Salju Lebat', 'icon' => 'bi-snow'],
-            95 => ['kondisi' => 'Badai Petir', 'icon' => 'bi-cloud-lightning-rain'],
-            96 => ['kondisi' => 'Badai Petir & Hujan Es Ringan', 'icon' => 'bi-cloud-lightning-rain'],
-            99 => ['kondisi' => 'Badai Petir & Hujan Es Lebat', 'icon' => 'bi-cloud-lightning-rain']
+            0  => ['icon' => 'bi-sun-fill'],           // Cerah
+            1  => ['icon' => 'bi-sun-fill'],           // Cerah
+            2  => ['icon' => 'bi-cloud-sun-fill'],     // Cerah Berawan
+            3  => ['icon' => 'bi-cloud-sun-fill'],     // Cerah Berawan
+            4  => ['icon' => 'bi-cloud-fill'],         // Berawan
+            5  => ['icon' => 'bi-cloud-fill'],         // Berawan
+            10 => ['icon' => 'bi-cloud-fog-fill'],     // Asap
+            45 => ['icon' => 'bi-cloud-fog-fill'],     // Berkabut
+            60 => ['icon' => 'bi-cloud-drizzle-fill'], // Hujan Lokal
+            61 => ['icon' => 'bi-cloud-rain-fill'],    // Hujan Ringan
+            63 => ['icon' => 'bi-cloud-rain-fill'],    // Hujan Sedang
+            65 => ['icon' => 'bi-cloud-rain-heavy-fill'], // Hujan Lebat
+            80 => ['icon' => 'bi-cloud-rain-fill'],    // Hujan Ringan
+            81 => ['icon' => 'bi-cloud-rain-heavy-fill'], // Hujan Sedang
+            82 => ['icon' => 'bi-cloud-rain-heavy-fill'], // Hujan Lebat
+            95 => ['icon' => 'bi-cloud-lightning-rain-fill'], // Hujan Petir
+            97 => ['icon' => 'bi-cloud-lightning-rain-fill'], // Hujan Petir Lebat
         ];
 
-        return $map[$kode] ?? ['kondisi' => 'Tidak Diketahui', 'icon' => 'bi-cloud'];
+        // Mapping default berdasarkan deskripsi bila kode tidak dikenal
+        if (!isset($map[$kode])) {
+            $descLower = strtolower($desc);
+            if (str_contains($descLower, 'petir'))  return ['icon' => 'bi-cloud-lightning-rain-fill'];
+            if (str_contains($descLower, 'lebat'))  return ['icon' => 'bi-cloud-rain-heavy-fill'];
+            if (str_contains($descLower, 'hujan'))  return ['icon' => 'bi-cloud-rain-fill'];
+            if (str_contains($descLower, 'gerimis')) return ['icon' => 'bi-cloud-drizzle-fill'];
+            if (str_contains($descLower, 'kabut'))  return ['icon' => 'bi-cloud-fog-fill'];
+            if (str_contains($descLower, 'berawan')) return ['icon' => 'bi-cloud-sun-fill'];
+            if (str_contains($descLower, 'cerah'))  return ['icon' => 'bi-sun-fill'];
+            return ['icon' => 'bi-cloud-fill'];
+        }
+
+        return $map[$kode];
     }
 }

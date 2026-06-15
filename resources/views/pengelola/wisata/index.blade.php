@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.dashboard')
 
 @section('title', 'Kelola Tempat Wisata')
 
@@ -19,6 +19,8 @@
                     <tr>
                         <th class="text-uppercase text-secondary small px-4 py-3">Wisata</th>
                         <th class="text-uppercase text-secondary small px-4 py-3">Harga Tiket</th>
+                        <th class="text-uppercase text-secondary small px-4 py-3">Jam Buka</th>
+                        <th class="text-uppercase text-secondary small px-4 py-3">Hari Buka</th>
                         <th class="text-uppercase text-secondary small px-4 py-3">Deskripsi</th>
                         <th class="text-uppercase text-secondary small px-4 py-3 text-end">Aksi</th>
                     </tr>
@@ -37,10 +39,30 @@
                                 Rp {{ number_format($w->harga_tiket, 0, ',', '.') }}
                             @endif
                         </td>
-                        <td class="px-4 py-3 small text-muted">{{ Str::limit($w->deskripsi, 50) }}</td>
+                        <td class="px-4 py-3 small">
+                            @if($w->jam_buka && $w->jam_tutup)
+                                <span class="text-dark fw-medium">
+                                    {{ substr($w->jam_buka, 0, 5) }} &ndash; {{ substr($w->jam_tutup, 0, 5) }} WIB
+                                </span>
+                            @else
+                                <span class="text-muted fst-italic">&mdash;</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3" style="min-width: 180px;">
+                            @php $hariBuka = $w->hari_buka ?? []; @endphp
+                            @if(count($hariBuka) > 0)
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach($hariBuka as $hari)
+                                        <span class="badge text-bg-light border small fw-normal">{{ Str::limit($hari, 3, '') }}</span>
+                                    @endforeach
+                                </div>
+                            @else
+                                <span class="text-muted fst-italic small">Setiap hari</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 small text-muted">{{ Str::limit($w->deskripsi, 40) }}</td>
                         <td class="px-4 py-3 text-end text-nowrap">
                             <div class="d-flex justify-content-end gap-1">
-                                <a href="{{ route('pengelola.wisata.show', $w) }}" class="btn btn-sm btn-outline-info fw-medium">Detail</a>
                                 <a href="{{ route('pengelola.wisata.edit', $w) }}" class="btn btn-sm btn-outline-primary fw-medium">Ubah</a>
                                 <button type="button"
                                     class="btn btn-sm btn-outline-danger fw-medium btn-hapus"
@@ -67,26 +89,72 @@
 {{-- Tampilan Mobile (Card) --}}
 <div class="d-md-none">
     @forelse($wisata as $w)
-    <div class="card shadow-sm border-0 mb-3">
-        <div class="card-body">
-            <h5 class="card-title fw-bold text-dark mb-2">{{ $w->nama }}</h5>
-            
-            <div class="mb-2">
-                @if($w->hasCamping())
-                    <span class="badge bg-light text-dark border me-1 mb-1 fw-normal">Kunjungan: Rp {{ number_format($w->harga_tiket, 0, ',', '.') }}</span>
-                    <span class="badge bg-light text-dark border mb-1 fw-normal">Camping: Rp {{ number_format($w->harga_camping_efektif, 0, ',', '.') }}</span>
-                @else
-                    <span class="badge bg-light text-dark border mb-1 fw-normal">Tiket: Rp {{ number_format($w->harga_tiket, 0, ',', '.') }}</span>
-                @endif
+    <div class="card border-0 mb-3 overflow-hidden wisata-card"
+         style="border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); transition: box-shadow 0.2s;">
+        {{-- Header Card --}}
+        <div class="card-header border-0 py-3 px-3" style="background: linear-gradient(90deg, #00b4d8 0%, #2d6a4f 100%);">
+            <h6 class="fw-bold text-white mb-0">{{ $w->nama }}</h6>
+        </div>
+
+        {{-- Body Info --}}
+        <div class="card-body px-3 py-3">
+            {{-- Baris: Harga --}}
+            <div class="d-flex justify-content-between align-items-start mb-2 pb-2 border-bottom">
+                <span class="text-muted small" style="min-width:90px;">Harga Tiket</span>
+                <div class="text-end fw-medium small">
+                    @if($w->hasCamping())
+                        <div>Kunjungan: Rp {{ number_format($w->harga_tiket, 0, ',', '.') }}</div>
+                        <div>Camping: Rp {{ number_format($w->harga_camping_efektif, 0, ',', '.') }}</div>
+                    @else
+                        Rp {{ number_format($w->harga_tiket, 0, ',', '.') }}
+                    @endif
+                </div>
             </div>
 
-            <p class="card-text small text-muted mb-3">{{ Str::limit($w->deskripsi, 80) }}</p>
-            
-            <div class="d-flex gap-2">
-                <a href="{{ route('pengelola.wisata.show', $w) }}" class="btn btn-sm btn-outline-info flex-fill fw-medium">Detail</a>
-                <a href="{{ route('pengelola.wisata.edit', $w) }}" class="btn btn-sm btn-outline-primary flex-fill fw-medium">Ubah</a>
+            {{-- Baris: Jam Buka --}}
+            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                <span class="text-muted small" style="min-width:90px;">Jam Buka</span>
+                <span class="small fw-medium text-end">
+                    @if($w->jam_buka && $w->jam_tutup)
+                        {{ substr($w->jam_buka, 0, 5) }} &ndash; {{ substr($w->jam_tutup, 0, 5) }} WIB
+                    @else
+                        <span class="text-muted fst-italic">Tidak diatur</span>
+                    @endif
+                </span>
+            </div>
+
+            {{-- Baris: Hari Buka --}}
+            <div class="d-flex justify-content-between align-items-start mb-2 pb-2 border-bottom">
+                <span class="text-muted small" style="min-width:90px;">Hari Buka</span>
+                <div class="text-end">
+                    @php $hariBuka = $w->hari_buka ?? []; @endphp
+                    @if(count($hariBuka) > 0)
+                        <div class="d-flex flex-wrap gap-1 justify-content-end">
+                            @foreach($hariBuka as $hari)
+                                <span class="badge text-bg-light border fw-normal" style="font-size:0.7rem;">{{ Str::limit($hari, 3, '') }}</span>
+                            @endforeach
+                        </div>
+                    @else
+                        <span class="small text-muted">Setiap hari</span>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Deskripsi --}}
+            @if($w->deskripsi)
+            <p class="small text-muted mb-0">{{ Str::limit($w->deskripsi, 90) }}</p>
+            @endif
+        </div>
+
+        {{-- Footer Aksi --}}
+        <div class="card-footer border-0 bg-white px-3 pb-3 pt-0">
+            <div class="d-grid gap-2 d-flex">
+                <a href="{{ route('pengelola.wisata.edit', $w) }}"
+                   class="btn btn-primary btn-sm flex-fill fw-semibold rounded-pill">
+                    Ubah
+                </a>
                 <button type="button"
-                    class="btn btn-sm btn-outline-danger flex-fill fw-medium btn-hapus"
+                    class="btn btn-outline-danger btn-sm flex-fill fw-semibold rounded-pill btn-hapus"
                     data-nama="{{ $w->nama }}"
                     data-action="{{ route('pengelola.wisata.destroy', $w) }}">
                     Hapus
@@ -95,9 +163,10 @@
         </div>
     </div>
     @empty
-    <div class="card shadow-sm border-0">
+    <div class="card border-0 shadow-sm">
         <div class="card-body text-center text-muted py-5">
-            Belum ada data wisata. <br><a href="{{ route('pengelola.wisata.create') }}" class="text-primary text-decoration-none mt-2 d-inline-block">Tambah wisata</a>
+            Belum ada data wisata.<br>
+            <a href="{{ route('pengelola.wisata.create') }}" class="text-primary text-decoration-none mt-2 d-inline-block">Tambah wisata</a>
         </div>
     </div>
     @endforelse

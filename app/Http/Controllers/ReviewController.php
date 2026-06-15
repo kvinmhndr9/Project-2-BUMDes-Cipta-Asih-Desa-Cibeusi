@@ -13,7 +13,7 @@ class ReviewController extends Controller
             'id_wisata' => 'required|exists:Wisata,id_wisata',
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:10240',
         ]);
 
         $tiket = \App\Models\Tiket::findOrFail($request->id_tiket);
@@ -34,15 +34,16 @@ class ReviewController extends Controller
 
         $fotoPath = null;
         if ($request->hasFile('foto')) {
-            $fotoPath = $request->file('foto')->store('wisata-reviews', 'public');
+            $fotoPath = cloudinary()->upload($request->file('foto')->getRealPath())->getSecurePath();
 
-            // Tambahkan juga ke Galeri Wisata
+            // Tambahkan juga ke Galeri Wisata (ditandai source: review — tidak bisa dihapus manual)
             $wisataModel = \App\Models\Wisata::find($request->id_wisata);
             if ($wisataModel) {
                 $galleries = $wisataModel->galleries ?? [];
                 $galleries[] = [
-                    'image' => $fotoPath,
+                    'image'   => $fotoPath,
                     'caption' => 'Foto dari ulasan pengunjung ' . auth()->user()->name,
+                    'source'  => 'review',
                 ];
                 $wisataModel->update(['galleries' => $galleries]);
             }
@@ -70,7 +71,7 @@ class ReviewController extends Controller
         $request->validate([
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:10240',
         ]);
 
         $data = [
@@ -79,18 +80,16 @@ class ReviewController extends Controller
         ];
 
         if ($request->hasFile('foto')) {
-            if ($review->foto && \Illuminate\Support\Facades\Storage::disk('public')->exists($review->foto)) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($review->foto);
-            }
-            $data['foto'] = $request->file('foto')->store('wisata-reviews', 'public');
+            $data['foto'] = cloudinary()->upload($request->file('foto')->getRealPath())->getSecurePath();
 
-            // Tambahkan juga ke Galeri Wisata jika ada foto baru
+            // Tambahkan juga ke Galeri Wisata jika ada foto baru (ditandai source: review)
             $wisataModel = \App\Models\Wisata::find($review->id_wisata);
             if ($wisataModel) {
                 $galleries = $wisataModel->galleries ?? [];
                 $galleries[] = [
                     'image'   => $data['foto'],
                     'caption' => 'Foto dari ulasan pengunjung ' . auth()->user()->name,
+                    'source'  => 'review',
                 ];
                 $wisataModel->update(['galleries' => $galleries]);
             }
